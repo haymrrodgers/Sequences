@@ -1,0 +1,159 @@
+import React, { useState, useEffect } from "react";
+import { View, Text, TextInput, Button, Alert, StyleSheet, Share } from "react-native";
+
+// Predefined puzzles with difficulty levels
+const predefinedPuzzles = {
+  "2025-01-18": {
+    easy: { sequence: "2, 4, ?, 8, 10", answer: 6 },
+    medium: { sequence: "3, 6, 9, ?, 15", answer: 12 },
+    hard: { sequence: "10, 20, 30, ?, 50", answer: 40 },
+  },
+  // Add more puzzles here
+};
+
+// Helper function to calculate the puzzle ID
+const getPuzzleId = () => {
+  const baseDate = new Date("2025-01-18");
+  const today = new Date();
+  const diffInDays = Math.floor((today - baseDate) / (1000 * 60 * 60 * 24));
+  return diffInDays + 1; // "001" for 2025-01-18, "002" for 2025-01-19, etc.
+};
+
+const getTodayPuzzles = () => {
+  const today = new Date().toISOString().split("T")[0];
+  return predefinedPuzzles[today] || null;
+};
+
+export default function App() {
+  const [puzzles, setPuzzles] = useState(getTodayPuzzles());
+  const [difficulty, setDifficulty] = useState("easy");
+  const [input, setInput] = useState("");
+  const [progress, setProgress] = useState({ easy: null, medium: null, hard: null }); // Tracks 🟩, 🟥, ⬛️
+  const [hasFailed, setHasFailed] = useState(false);
+  const [timer, setTimer] = useState(null);
+
+  // Reset puzzles at midnight
+  useEffect(() => {
+    const now = new Date();
+    const resetTime = new Date();
+    resetTime.setHours(24, 0, 0, 0); // Midnight
+    const timeUntilMidnight = resetTime - now;
+
+    const timeout = setTimeout(() => {
+      setPuzzles(getTodayPuzzles());
+      setDifficulty("easy");
+      setInput("");
+      setProgress({ easy: null, medium: null, hard: null });
+      setHasFailed(false);
+    }, timeUntilMidnight);
+
+    setTimer(timeout);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  const checkAnswer = () => {
+    if (!puzzles) {
+      Alert.alert("No puzzles", "No puzzles are available for today.");
+      return;
+    }
+
+    const currentPuzzle = puzzles[difficulty];
+    const nextDifficulty = difficulty === "easy" ? "medium" : difficulty === "medium" ? "hard" : null;
+
+    if (parseInt(input) === currentPuzzle.answer) {
+      setProgress((prev) => ({ ...prev, [difficulty]: "🟩" }));
+      if (nextDifficulty) {
+        setDifficulty(nextDifficulty);
+        setInput("");
+      } else {
+        Alert.alert("Congratulations!", "You solved all puzzles for today!");
+        shareResult();
+      }
+    } else {
+      setProgress((prev) => ({ ...prev, [difficulty]: "🟥" }));
+      setHasFailed(true);
+      Alert.alert("Incorrect", "You have used your only guess. You cannot proceed.");
+    }
+  };
+
+  const shareResult = async () => {
+    const puzzleId = getPuzzleId().toString().padStart(3, "0");
+    const progressString = `${progress.easy || "⬛️"}${progress.medium || "⬛️"}${progress.hard || "⬛️"}`;
+
+    try {
+      await Share.share({
+        message: `Sequences ${puzzleId}\n${progressString}\nsequences.club`,
+      });
+    } catch (error) {
+      Alert.alert("Error", "Unable to share your result.");
+    }
+  };
+
+  const getPuzzleDisplay = () => {
+    if (hasFailed) {
+      return <Text style={styles.error}>You have failed today's puzzles. Try again tomorrow!</Text>;
+    }
+
+    if (puzzles && puzzles[difficulty]) {
+      return (
+        <>
+          <Text style={styles.puzzle}>
+            {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}: {puzzles[difficulty].sequence}
+          </Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your answer"
+            keyboardType="numeric"
+            value={input}
+            onChangeText={setInput}
+          />
+          <Button title="Submit" onPress={checkAnswer} />
+        </>
+      );
+    }
+
+    return <Text style={styles.error}>No puzzles available for today!</Text>;
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Sequences</Text>
+      {getPuzzleDisplay()}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f5f5f5",
+    padding: 20,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: "bold",
+    marginBottom: 20,
+  },
+  puzzle: {
+    fontSize: 24,
+    marginBottom: 20,
+  },
+  input: {
+    height: 50,
+    width: "80%",
+    borderColor: "gray",
+    borderWidth: 1,
+    borderRadius: 5,
+    paddingHorizontal: 10,
+    marginBottom: 20,
+    fontSize: 18,
+  },
+  error: {
+    fontSize: 18,
+    color: "red",
+    textAlign: "center",
+  },
+});
