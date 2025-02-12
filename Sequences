@@ -3,7 +3,7 @@ import { View, Text, TextInput, Button, Alert, StyleSheet, Share } from "react-n
 
 // Predefined puzzles with difficulty levels
 const predefinedPuzzles = {
-  "2025-01-18": {
+  "2025-02-11": {
     easy: { sequence: "2, 4, ?, 8, 10", answer: 6 },
     medium: { sequence: "3, 6, 9, ?, 15", answer: 12 },
     hard: { sequence: "10, 20, 30, ?, 50", answer: 40 },
@@ -13,7 +13,7 @@ const predefinedPuzzles = {
 
 // Helper function to calculate the puzzle ID
 const getPuzzleId = () => {
-  const baseDate = new Date("2025-01-18");
+  const baseDate = new Date("2025-02-11");
   const today = new Date();
   const diffInDays = Math.floor((today - baseDate) / (1000 * 60 * 60 * 24));
   return diffInDays + 1; // "001" for 2025-01-18, "002" for 2025-01-19, etc.
